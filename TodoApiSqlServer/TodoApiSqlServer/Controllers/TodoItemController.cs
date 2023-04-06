@@ -9,20 +9,20 @@ namespace TodoApiSqlServer.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class TodoItemController : ControllerBase
-    {      
-
+    {
         private readonly string connectionString = "Server=DATNGUYEN\\SQLEXPRESS;Database=testdb;Integrated Security=True;";
 
         [HttpGet]
         public List<Itemmodel> GetAllItems()
         {
             List<Itemmodel> itemmodels = new List<Itemmodel>();
+
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 connection.Open();
                 string query = "SELECT * FROM product";
                 using (SqlCommand command = new SqlCommand(query, connection))
-                {                 
+                {
                     using (SqlDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
@@ -33,11 +33,38 @@ namespace TodoApiSqlServer.Controllers
                             model.price = (double)reader["price"];
                             itemmodels.Add(model);
                         }
-                    }                   
+                    }
                 }
                 connection.Close();
             }
             return itemmodels;
+        }
+
+        [HttpGet("{id}")]
+        public Itemmodel GetItemsId(int id)
+        {
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                string query = "SELECT * FROM product Where id = @id";
+                using (SqlCommand command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@id", id);
+                    SqlDataReader reader = command.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        Itemmodel item = new Itemmodel
+                        {
+                            id = reader.GetInt32(0),
+                            product = reader.GetString(1),
+                            price = reader.GetDouble(2),
+                        };
+                        return item;
+                    }
+                    connection.Close();
+                    return null!;
+                }
+            }
         }
 
         [HttpPost]
@@ -51,13 +78,14 @@ namespace TodoApiSqlServer.Controllers
                 {
                     command.Parameters.AddWithValue("@id", model.id);
                     command.Parameters.AddWithValue("@product", model.product);
-                    command.Parameters.AddWithValue("@price", model.price);                 
-                    command.ExecuteNonQuery();
-                    connection.Close();                   
+                    command.Parameters.AddWithValue("@price", model.price);
+
+                    int ItemId = Convert.ToInt32(command.ExecuteScalar());
+                    model.id = ItemId;
                 }
                 connection.Close();
-                return model;
             }
+            return model;
         }
 
         [HttpPut("{id}")]
@@ -96,12 +124,12 @@ namespace TodoApiSqlServer.Controllers
                     int rows = command.ExecuteNonQuery();
                     if (rows > 0)
                     {
-                        return "Product deleted successfully.";
+                        return "Item deleted successfully.";
                     }                                                           
                 }
                 connection.Close();
             }
-            return "Failed to delete product.";
+            return "Failed to delete item.";
         }       
     }
 }
